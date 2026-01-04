@@ -1,1 +1,207 @@
+#(6)正確的程式與註解：
 
+import pygame
+import random
+import time
+
+# 初始化
+pygame.init()
+screen = pygame.display.set_mode((800, 600))
+pygame.display.set_caption("鞋匠大冒險")
+clock = pygame.time.Clock()
+
+# 音樂載入
+pygame.mixer.music.load("bg_music.mp3")
+pygame.mixer.music.play(-1)
+sound_collect = pygame.mixer.Sound("collect.wav")
+sound_bad = pygame.mixer.Sound("bad_collect.wav")
+sound_rare = pygame.mixer.Sound("rare_collect.wav")
+sound_gameover = pygame.mixer.Sound("gameover.wav")
+
+# 顏色定義
+WHITE = (255, 255, 255)
+RED = (255, 0, 0)
+BLACK = (0, 0, 0)
+
+# 載入圖片
+background = pygame.image.load("jungle_background.jpg")
+background = pygame.transform.scale(background, (800, 600))
+shoemaker_img = pygame.image.load("shoemaker.png")
+shoemaker_img = pygame.transform.scale(shoemaker_img, (65, 65))
+mouse_img = pygame.image.load("mouse.png")
+mouse_img = pygame.transform.scale(mouse_img, (55, 55))
+normal_material_img = pygame.image.load("normal_material.png")
+normal_material_img = pygame.transform.scale(normal_material_img, (50, 50))
+bad_material_img = pygame.image.load("bad_material.png")
+bad_material_img = pygame.transform.scale(bad_material_img, (50, 50))
+rare_material_img = pygame.image.load("rare_material.png")
+rare_material_img = pygame.transform.scale(rare_material_img, (50, 50))
+
+# 鞋匠類別
+class Shoemaker(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__()
+        self.image = shoemaker_img
+        self.rect = self.image.get_rect(center=(400, 300))
+        self.speed = 5
+
+    def update(self, keys):
+        if keys[pygame.K_LEFT]: self.rect.x -= self.speed
+        if keys[pygame.K_RIGHT]: self.rect.x += self.speed
+        if keys[pygame.K_UP]: self.rect.y -= self.speed
+        if keys[pygame.K_DOWN]: self.rect.y += self.speed
+
+# 材料類別
+class Material(pygame.sprite.Sprite):
+    def __init__(self, kind="normal"):
+        super().__init__()
+        self.kind = kind
+        if kind == "normal":
+            self.image = normal_material_img
+        elif kind == "bad":
+            self.image = bad_material_img
+        elif kind == "rare":
+            self.image = rare_material_img
+        self.rect = self.image.get_rect(center=(random.randint(20, 780), random.randint(20, 580)))
+        self.spawn_time = time.time()
+
+    def should_respawn(self):
+        return time.time() - self.spawn_time > 7
+
+# 老鼠類別
+class Mouse(pygame.sprite.Sprite):
+    def __init__(self, speed=None):
+        super().__init__()
+        self.image = mouse_img
+        self.rect = self.image.get_rect(center=(random.randint(20, 780), random.randint(20, 580)))
+        self.base_speed = random.choice([2, 3]) if speed is None else speed
+        self.speed_x = random.choice([-self.base_speed, self.base_speed])
+        self.speed_y = random.choice([-self.base_speed, self.base_speed])
+
+    def update(self):
+        self.rect.x += self.speed_x
+        self.rect.y += self.speed_y
+        if self.rect.left <= 0 or self.rect.right >= 800: self.speed_x *= -1
+        if self.rect.top <= 0 or self.rect.bottom >= 600: self.speed_y *= -1
+
+    def double_speed(self):
+        self.speed_x *= 2
+        self.speed_y *= 2
+
+# 傳參版本的加材料函式
+def add_material(kind, materials_group, all_sprites_group):
+    material = Material(kind)
+    materials_group.add(material)
+    all_sprites_group.add(material)
+
+# 初始化遊戲
+def initialize_game():
+    shoemaker = Shoemaker()
+    materials = pygame.sprite.Group()
+    mice = pygame.sprite.Group()
+    all_sprites = pygame.sprite.Group()
+    all_sprites.add(shoemaker)
+
+    for _ in range(5): add_material("normal", materials, all_sprites)
+    for _ in range(2): add_material("bad", materials, all_sprites)
+    for _ in range(1): add_material("rare", materials, all_sprites)
+
+    for _ in range(2):
+        mouse = Mouse()
+        mice.add(mouse)
+        all_sprites.add(mouse)
+
+    score = 0
+    start_time = time.time()
+    return shoemaker, materials, mice, all_sprites, score, start_time, False, False, False
+
+# 重置遊戲
+def reset_game():
+    return initialize_game()
+
+# Game Over 畫面
+def game_over_screen():
+    font = pygame.font.SysFont(None, 72)
+    restart_font = pygame.font.SysFont(None, 48)
+    game_over_text = font.render("Game Over", True, RED)
+    restart_text = restart_font.render("Restart", True, BLACK)
+    exit_text = restart_font.render("Exit", True, BLACK)
+
+    while True:
+        screen.fill(WHITE)
+        screen.blit(game_over_text, (300, 200))
+        screen.blit(restart_text, (350, 300))
+        screen.blit(exit_text, (350, 400))
+        pygame.display.flip()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit(); return False
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                x, y = event.pos
+                if 350 <= x <= 450 and 300 <= y <= 350: return True
+                elif 350 <= x <= 450 and 400 <= y <= 450: pygame.quit(); return False
+
+# 遊戲主迴圈
+running = True
+shoemaker, materials, mice, all_sprites, score, start_time, added_mouse_3, added_mouse_4, speed_doubled = initialize_game()
+font = pygame.font.SysFont(None, 36)
+
+while running:
+    clock.tick(60)
+    screen.blit(background, (0, 0))
+    keys = pygame.key.get_pressed()
+
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+    shoemaker.update(keys)
+    mice.update()
+
+    now = time.time()
+    elapsed = now - start_time
+
+    if elapsed > 10 and not added_mouse_3:
+        m3 = Mouse(); mice.add(m3); all_sprites.add(m3); added_mouse_3 = True
+    if elapsed > 18 and not added_mouse_4:
+        m4 = Mouse(); mice.add(m4); all_sprites.add(m4); added_mouse_4 = True
+    if elapsed > 25 and not speed_doubled:
+        for m in mice: m.double_speed()
+        speed_doubled = True
+
+    for material in list(materials):
+        if pygame.sprite.collide_rect(shoemaker, material):
+            if material.kind == "normal":
+                score += 1; sound_collect.play()
+            elif material.kind == "bad":
+                score -= 1; sound_bad.play()
+            elif material.kind == "rare":
+                score += 3; sound_rare.play()
+            materials.remove(material)
+            all_sprites.remove(material)
+            add_material(material.kind, materials, all_sprites)
+        elif material.should_respawn():
+            materials.remove(material)
+            all_sprites.remove(material)
+            add_material(material.kind, materials, all_sprites)
+
+    if pygame.sprite.spritecollideany(shoemaker, mice):
+        sound_gameover.play()
+        if not game_over_screen():
+            running = False
+        else:
+            shoemaker, materials, mice, all_sprites, score, start_time, added_mouse_3, added_mouse_4, speed_doubled = reset_game()
+
+    if running:
+        all_sprites.draw(screen)
+        score_text = font.render(f"SCORE: {score}", True, BLACK)
+        screen.blit(score_text, (10, 10))
+        pygame.display.flip()
+
+pygame.quit()
+
+%pip install pygame
+
+import pygame
+print(pygame.__version__)
