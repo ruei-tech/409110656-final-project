@@ -59,3 +59,127 @@ while running:
 
 # 退出遊戲
 pygame.quit()
+
+
+----------------------------------------------------------
+
+import pygame
+import random
+
+# 初始化 Pygame
+pygame.init()
+
+# 設定遊戲視窗大小
+width, height = 800, 600
+screen = pygame.display.set_mode((width, height))
+pygame.display.set_caption("Pac-Man Doodle with Maze")
+
+# 顏色設定
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+YELLOW = (255, 255, 0)
+RED = (255, 0, 0)
+BLUE = (0, 0, 255)
+GREEN = (0, 255, 0)
+
+# 設定遊戲參數
+pacman_size = 25
+pacman_x = width // 2
+pacman_y = height // 2
+pacman_speed = 5
+
+# 小精靈設定
+ghost_size = 25
+ghosts = [{'x': random.randint(50, width-50), 'y': random.randint(50, height-50)} for _ in range(4)]
+
+# 食物設定
+food_size = 10
+foods = [{'x': random.randint(50, width-50), 'y': random.randint(50, height-50)} for _ in range(10)]
+
+# 設定迷宮結構
+maze = [
+    "1111111111111111",
+    "1000000000000001",
+    "1011101110111101",
+    "1010101010101101",
+    "1010111010101101",
+    "1010000010000101",
+    "1011111011111101",
+    "1000000000000001",
+    "1111111111111111"
+]
+
+# 設置遊戲時鐘
+clock = pygame.time.Clock()
+
+# 計分系統
+score = 0
+font = pygame.font.SysFont(None, 30)
+
+# 繪製迷宮
+def draw_maze():
+    block_size = 50  # 每個方塊的大小
+    for y, row in enumerate(maze):
+        for x, cell in enumerate(row):
+            if cell == "1":
+                pygame.draw.rect(screen, BLUE, (x * block_size, y * block_size, block_size, block_size))
+
+# 顯示分數
+def show_score():
+    score_text = font.render(f"Score: {score}", True, WHITE)
+    screen.blit(score_text, (10, 10))
+
+# 遊戲主循環
+running = True
+while running:
+    screen.fill(BLACK)  # 清屏
+
+    # 檢查事件
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+    # 控制 Pac-Man 的移動
+    keys = pygame.key.get_pressed()
+    if keys[pygame.K_LEFT]:
+        pacman_x -= pacman_speed
+    if keys[pygame.K_RIGHT]:
+        pacman_x += pacman_speed
+    if keys[pygame.K_UP]:
+        pacman_y -= pacman_speed
+    if keys[pygame.K_DOWN]:
+        pacman_y += pacman_speed
+
+    # 確保 Pac-Man 不會移出螢幕
+    pacman_x = max(pacman_size, min(width - pacman_size, pacman_x))
+    pacman_y = max(pacman_size, min(height - pacman_size, pacman_y))
+
+    # 繪製迷宮
+    draw_maze()
+
+    # 畫出 Pac-Man
+    pygame.draw.circle(screen, YELLOW, (pacman_x, pacman_y), pacman_size)
+
+    # 繪製食物
+    for food in foods[:]:
+        pygame.draw.circle(screen, GREEN, (food['x'], food['y']), food_size)
+        # 檢查是否吃掉食物
+        if abs(pacman_x - food['x']) < pacman_size and abs(pacman_y - food['y']) < pacman_size:
+            foods.remove(food)
+            score += 10  # 增加分數
+
+    # 繪製小精靈
+    for ghost in ghosts:
+        pygame.draw.circle(screen, RED, (ghost['x'], ghost['y']), ghost_size)
+
+    # 顯示分數
+    show_score()
+
+    # 更新畫面
+    pygame.display.update()
+
+    # 控制遊戲更新速率
+    clock.tick(30)
+
+# 退出遊戲
+pygame.quit()
